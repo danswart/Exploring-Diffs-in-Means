@@ -1,0 +1,346 @@
+---
+title: "Cohen's d and ANOM"
+author: "Dan Swart"
+date: "2025-04-29"
+format: html
+---
+
+
+```{r}
+#| label: setup
+#| include: false
+#| echo: false
+
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Visualizing Distribution Overlap
+
+```{r}
+#| echo: false
+
+# Example code for visualizing overlap
+library(ggplot2)
+
+# Simulate data with small mean difference but large overlap
+group_A <- stats::rnorm(1000, mean = 100, sd = 15)
+group_B <- stats::rnorm(
+  1000,
+  mean = 95,
+  sd = 15
+)
+
+# Put in data frame
+df <- base::data.frame(
+  score = base::c(group_A, group_B),
+  group = base::factor(base::c(base::rep("Group A", 1000), base::rep("Group B", 1000)))
+)
+
+# Calculate Cohen's d
+cohens_d <- (base::mean(group_A) - base::mean(group_B)) /
+  base::sqrt((stats::var(group_A) + stats::var(group_B)) / 2)
+
+# T-test
+t_result <- stats::t.test(group_A, group_B)
+
+# Plot distributions
+ggplot2::ggplot(df, ggplot2::aes(x = score, fill = group)) +
+  ggplot2::geom_density(alpha = 0.5) +
+  ggplot2::geom_vline(xintercept = base::mean(group_A), color = "blue", linetype = "dashed") +
+  ggplot2::geom_vline(xintercept = mean(group_B), color = "red", linetype = "dashed") +
+  ggplot2::labs(
+    title = "Distribution Overlap Despite Different Means",
+    subtitle = paste(
+      "Cohen's d =",
+      base::round(cohens_d, 2),
+      ", p-value =",
+      base::format.pval(t_result$p.value, digits = 3)
+    ),
+    x = "Score",
+    y = "Density"
+  ) +
+  ggplot2::theme_minimal()
+```
+
+# Quantifying Distribution Overlap
+
+Calculate the overlap coefficient and probability of superiority from Cohen's d:
+
+```{r}
+#| echo: false
+
+
+#| # Function to calculate overlap coefficient from Cohen's d
+calculate_overlap <- function(d) {
+  # Overlap coefficient formula
+  ovl <- 2 * stats::pnorm(-abs(d) / 2) * 100
+  base::return(ovl)
+}
+
+# Function to calculate probability of superiority from Cohen's d
+calculate_superiority_prob <- function(d) {
+  # Probability of superiority formula
+  prob <- stats::pnorm(d / base::sqrt(2)) * 100
+  base::return(prob)
+}
+
+# Example with your Cohen's d = 0.36
+d_value <- 0.36
+overlap_percent <- calculate_overlap(d_value)
+superiority_percent <- calculate_superiority_prob(d_value)
+
+# Output results
+cat("Cohen's d =", d_value, "\n")
+cat("Overlap coefficient =", round(overlap_percent, 1), "%\n")
+cat("Probability of superiority =", round(superiority_percent, 1), "%\n")
+
+# Create visualization of overlap
+library(ggplot2)
+
+# Generate data for two normal distributions
+x <- base::seq(-4, 4, length.out = 1000)
+group1 <- base::data.frame(x = x, y = stats::dnorm(x, mean = 0, sd = 1), group = "Group A")
+group2 <- base::data.frame(
+  x = x,
+  y = stats::dnorm(x, mean = d_value, sd = 1),
+  group = "Group B"
+)
+combined_data <- base::rbind(group1, group2)
+
+# Create plot
+overlap_plot <- ggplot2::ggplot(combined_data, ggplot2::aes(x = x, y = y, fill = group)) +
+  ggplot2::geom_area(alpha = 0.5, position = "identity") +
+  ggplot2::geom_vline(xintercept = 0, linetype = "dashed", color = "blue") +
+  ggplot2::geom_vline(xintercept = d_value, linetype = "dashed", color = "red") +
+  ggplot2::annotate(
+    "text",
+    x = -1.5,
+    y = 0.1,
+    label = paste0("Overlap = ", base::round(overlap_percent, 1), "%")
+  ) +
+  ggplot2::annotate(
+    "text",
+    x = -1.5,
+    y = 0.15,
+    label = base::paste0("Cohen's d = ", d_value)
+  ) +
+  ggplot2::annotate(
+    "text",
+    x = -1.5,
+    y = 0.05,
+    label = base::paste0("P(superiority) = ", base::round(superiority_percent, 1), "%")
+  ) +
+  ggplot2::labs(
+    title = "Distribution Overlap for Cohen's d",
+    subtitle = "Showing the extent of overlap between groups with different means",
+    x = "Standardized Score (z-score)",
+    y = "Density"
+  ) +
+  ggplot2::theme_minimal()
+
+print(overlap_plot)
+
+# To apply this to your actual groups:
+# Replace with your actual groups' data
+# group_A <- your_first_group_data
+# group_B <- your_second_group_data
+
+# Calculate means and SDs and pool them
+# mean_A <- mean(group_A)
+# mean_B <- mean(group_B)
+# sd_pooled <- sqrt((var(group_A) + var(group_B))/2)
+
+# Calculate Cohen's d
+# cohens_d <- (mean_A - mean_B) / sd_pooled
+
+# Calculate overlap and superiority probability
+# overlap <- calculate_overlap(cohens_d)
+# superiority <- calculate_superiority_prob(cohens_d)
+```
+
+
+# Simulating distributions when you only have means and SDs:
+
+```{r}
+#| echo: false
+
+
+# Example: Simulating distributions from summary statistics
+library(ggplot2)
+
+# Given summary statistics
+male_mean <- 78.5
+male_sd <- 12.3
+female_mean <- 80.2
+female_sd <- 11.6
+male_n <- 500 # Estimate sample size
+female_n <- 500 # Estimate sample size
+
+# Simulate individual-level data
+set.seed(123)
+male_scores <- stats::rnorm(male_n, mean = male_mean, sd = male_sd)
+female_scores <- stats::rnorm(female_n, mean = female_mean, sd = female_sd)
+
+# Calculate Cohen's d
+cohens_d <- (female_mean - male_mean) / base::sqrt((male_sd^2 + female_sd^2) / 2)
+
+# Calculate overlap coefficient
+overlap <- calculate_overlap(cohens_d)
+superiority <- calculate_superiority_prob(cohens_d)
+
+# Create data frame for plotting
+df <- base::data.frame(
+  score = c(male_scores, female_scores),
+  gender = base::factor(base::c(base::rep("Male", male_n), base::rep("Female", female_n)))
+)
+
+# Visualize the distributions
+ggplot2::ggplot(df, ggplot2::aes(x = score, fill = gender)) +
+  ggplot2::geom_density(alpha = 0.5) +
+  ggplot2::geom_vline(xintercept = male_mean, color = "blue", linetype = "dashed") +
+  ggplot2::geom_vline(xintercept = female_mean, color = "red", linetype = "dashed") +
+  ggplot2::annotate(
+    "text",
+    x = base::max(df$score) * 0.8,
+    y = 0.03,
+    label = base::paste0("Cohen's d = ", base::round(cohens_d, 2))
+  ) +
+  ggplot2::annotate(
+    "text",
+    x = max(df$score) * 0.8,
+    y = 0.02,
+    label = paste0("Overlap = ", round(overlap, 1), "%")
+  ) +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(
+    title = "Simulated Distributions Based on Summary Statistics",
+    subtitle = "Showing how male and female scores might be distributed"
+  )
+
+```
+
+# Analysis of Means (ANOM)
+
+```{r}
+#| echo: false
+
+library(ggplot2)
+library(dplyr)
+
+# Given summary statistics
+male_mean <- 78.5
+male_sd <- 12.3
+female_mean <- 80.2
+female_sd <- 11.6
+male_n <- 500 # Estimated sample size
+female_n <- 500 # Estimated sample size
+
+# Calculate overall (grand) mean
+overall_n <- male_n + female_n
+overall_mean <- (male_mean * male_n + female_mean * female_n) / overall_n
+
+# Calculate pooled standard deviation
+pooled_sd <- base::sqrt(
+  ((male_n - 1) * male_sd^2 + (female_n - 1) * female_sd^2) /
+    (male_n + female_n - 2)
+)
+
+# Calculate standard error for each group
+male_se <- pooled_sd / base::sqrt(male_n)
+female_se <- pooled_sd / base::sqrt(female_n)
+
+# Calculate critical value (for 95% confidence)
+# Using t-distribution with df = n1 + n2 - 2
+alpha <- 0.05
+critical_value <- stats::qt(1 - alpha / 2, df = male_n + female_n - 2)
+
+# Calculate decision limits
+upper_decision_limit <- overall_mean +
+  critical_value * pooled_sd * base::sqrt(1 / male_n + 1 / female_n)
+lower_decision_limit <- overall_mean -
+  critical_value * pooled_sd * base::sqrt(1 / male_n + 1 / female_n)
+
+# Create data frame for ANOM plot
+anom_df <- base::data.frame(
+  group = base::c("Male", "Female"),
+  mean = base::c(male_mean, female_mean),
+  n = base::c(male_n, female_n)
+)
+
+# Calculate if means are significantly different from overall mean
+anom_df$significant <- (anom_df$mean > upper_decision_limit) |
+  (anom_df$mean < lower_decision_limit)
+
+# Create ANOM plot
+ggplot2::ggplot(anom_df, ggplot2::aes(x = group, y = mean, color = significant)) +
+  ggplot2::geom_point(size = 4) +
+  ggplot2::geom_hline(yintercept = overall_mean, linetype = "solid") +
+  ggplot2::geom_hline(yintercept = upper_decision_limit, linetype = "dashed") +
+  ggplot2::geom_hline(yintercept = lower_decision_limit, linetype = "dashed") +
+  ggplot2::annotate(
+    "text",
+    x = 1.5,
+    y = overall_mean + 1,
+    label = paste("Overall Mean =", base::round(overall_mean, 2))
+  ) +
+  ggplot2::annotate(
+    "text",
+    x = 1.5,
+    y = upper_decision_limit + 1,
+    label = "Upper Decision Limit"
+  ) +
+  ggplot2::annotate(
+    "text",
+    x = 1.5,
+    y = lower_decision_limit - 1,
+    label = "Lower Decision Limit"
+  ) +
+  ggplot2::scale_color_manual(values = c("black", "red")) +
+  ggplot2::labs(
+    title = "Analysis of Means (ANOM)",
+    subtitle = "Comparing Male and Female Score Means to Overall Mean",
+    y = "Mean Score",
+    x = "Group"
+  ) +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(legend.position = "none")
+
+# Calculate additional statistics for interpretation
+stats_df <- base::data.frame(
+  statistic = base::c(
+    "Overall Mean",
+    "Male Mean",
+    "Female Mean",
+    "Difference (F-M)",
+    "Cohen's d",
+    "Distribution Overlap",
+    "Upper Decision Limit",
+    "Lower Decision Limit",
+    "Significant Difference?"
+  ),
+  value = base::c(
+    base::round(overall_mean, 2),
+    male_mean,
+    female_mean,
+    base::round(female_mean - male_mean, 2),
+    base::round((female_mean - male_mean) / pooled_sd, 2),
+    base::round(calculate_overlap((female_mean - male_mean) / pooled_sd), 1),
+    base::round(upper_decision_limit, 2),
+    base::round(lower_decision_limit, 2),
+    base::ifelse(any(anom_df$significant), "Yes", "No")
+  )
+)
+
+# Print statistics
+print(stats_df)
+```
+
+The key differences in an Analysis of Means approach are:
+
+We're comparing each group's mean to the overall mean (rather than directly comparing groups)
+We calculate decision limits based on the overall variance
+Groups with means outside these limits are considered significantly different from the average
+The visual representation focuses on whether groups differ from the overall mean
+
+This approach is particularly useful when you have more than two groups, as it provides a single comprehensive analysis rather than multiple pairwise comparisons.
