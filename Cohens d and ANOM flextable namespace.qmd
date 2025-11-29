@@ -152,8 +152,22 @@ flextable::set_flextable_defaults(
   digits = 2,
   decimal.mark = ",",
   big.mark = " ",
-  na_str = "<na>"
-  )
+  na_str = "<na>")
+  
+  # flextable::theme_alafoli()	|>  # BLAH
+  # flextable::theme_apa()  # THIS IS NICE
+  # flextable::theme_booktabs() |>  # NICE, MORE COMPACT
+  # flextable::theme_box() |>   # OK, INCLUDES CELL BORDERS
+  # flextable::theme_tron() |>  # 'DARK MODE' BLUE TEXT
+  # flextable::theme_tron_legacy() |>   # 'DARK MODE' YELLOW TEXT
+  # flextable::theme_vader() |>    # 'DARK MODE' WHITE TEXT
+  # flextable::theme_vanilla() |>   # NOT SPECIAL
+  # flextable::theme_zebra()	|>
+  #
+  # flextable::bg(bg = "palegreen", part = "header")
+  # flextable::bg(i = 8, bg = "yellow", part = "body")   OR
+  # 
+
 
 
 # Set global theme for consistent plots
@@ -165,9 +179,9 @@ ggplot2::theme_set(
         family = "Cabin",
         face = "bold",
         color = "darkgreen",
-        size = 22,
+        size = 26,
         fill = "yellow",
-        lineheight = 1.0,
+        lineheight = 1.2,
         padding = ggplot2::margin(5.5, 5.5, 0.0, 5.5),
         margin = ggplot2::margin(0, 0, 5.5, 0)
       ),
@@ -175,15 +189,15 @@ ggplot2::theme_set(
         family = "Cabin",
         color = "darkgreen",
         face = "bold",
-        size = 20,
+        size = 24,
         fill = "yellow",
-        lineheight = 1.0,
-        padding = ggplot2::margin(0.0, 5.5, 5.5, 5.5),
-        margin = ggplot2::margin(0, 0, 5.5, 0)
+        lineheight = 1.2,
+        padding = ggplot2::margin(5.5, 5.5, 5.5, 5.5),
+        margin = ggplot2::margin(10.5, 0, 5.5, 0)
       ),
       plot.caption = ggtext::element_markdown(
         family = "Cabin",
-        size = 16,
+        size = 22,
         hjust = 1,
         color = "darkblue",
         face = "italic",
@@ -194,7 +208,7 @@ ggplot2::theme_set(
         family = "Cabin",
         face = "bold",
         color = "blue",
-        size = 16,
+        size = 20,
         angle = 45,
         hjust = 1
       ),
@@ -203,13 +217,13 @@ ggplot2::theme_set(
         family = "Cabin",
         face = "bold",
         color = "blue",
-        size = 16),
+        size = 20),
         # ggplot2::element_blank(),
       axis.text.y = ggtext::element_markdown(
         family = "Cabin",
         face = "bold",
         color = "blue",
-        size = 16,
+        size = 20,
         angle = 45,
         hjust = 1
       ),
@@ -218,7 +232,7 @@ ggplot2::theme_set(
         family = "Cabin",
         face = "bold",
         color = "blue",
-        size = 16),
+        size = 20),
         # ggplot2::element_blank(),
       strip.text = ggtext::element_markdown(
         family = "Cabin",
@@ -238,7 +252,6 @@ ggplot2::theme_set(
       plot.margin = ggplot2::margin(20, 20, 20, 20, "pt")
     )
 )
-
 
 
 
@@ -328,10 +341,32 @@ d_value <- 0.36
 overlap_percent <- calculate_overlap(d_value)
 superiority_percent <- calculate_superiority_prob(d_value)
 
-# Output results
-cat("Cohen's d =", d_value, "\n")
-cat("Overlap coefficient =", round(overlap_percent, 1), "%\n")
-cat("Probability of superiority =", round(superiority_percent, 1), "%\n")
+
+effect_size_df <- base::data.frame(
+  Measure = base::c(
+    "Cohen's d",
+    "Overlap coefficient",
+    "Probability of superiority"
+  ),
+  Value = base::c(
+    base::round(d_value, 2),
+    base::paste0(base::round(overlap_percent, 1), "%"),
+    base::paste0(base::round(superiority_percent, 1), "%")
+  )
+)
+
+flextable::flextable(effect_size_df) |>
+  flextable::bg(bg = "palegreen", part = "header") |>
+  flextable::align(j = "Value", align = "center", part = "body") |>
+  flextable::autofit()
+
+
+
+
+# # Output results
+# cat("Cohen's d =", d_value, "\n")
+# cat("Overlap coefficient =", round(overlap_percent, 1), "%\n")
+# cat("Probability of superiority =", round(superiority_percent, 1), "%\n")
 
 # Create visualization of overlap
 library(ggplot2)
@@ -517,19 +552,19 @@ ggplot2::ggplot(anom_df, ggplot2::aes(x = group, y = mean, color = significant))
   ggplot2::annotate(
     "text",
     x = 1.5,
-    y = overall_mean + 1,
+    y = overall_mean + .25,
     label = paste("Overall Mean =", base::round(overall_mean, 2))
   ) +
   ggplot2::annotate(
     "text",
     x = 1.5,
-    y = upper_decision_limit + 1,
+    y = upper_decision_limit + .25,
     label = "Upper Decision Limit"
   ) +
   ggplot2::annotate(
     "text",
     x = 1.5,
-    y = lower_decision_limit - 1,
+    y = lower_decision_limit - .25,
     label = "Lower Decision Limit"
   ) +
   ggplot2::scale_color_manual(values = c("black", "red")) +
@@ -562,12 +597,25 @@ stats_df <- base::data.frame(
     base::round(calculate_overlap((female_mean - male_mean) / pooled_sd), 1),
     base::round(upper_decision_limit, 2),
     base::round(lower_decision_limit, 2),
-    base::ifelse(any(anom_df$significant), "Yes", "No")
+    base::ifelse(base::any(anom_df$significant), "Yes", "No")
   )
 )
 
-# Print statistics
-print(stats_df)
+n_rows <- base::nrow(stats_df)
+sig_color <- base::ifelse(stats_df$value[n_rows] == "Yes", "yellow", "#FFB6C1")
+
+flextable::flextable(stats_df) |>
+  flextable::set_header_labels(statistic = "Statistic", value = "Value") |>
+  flextable::bg(bg = "palegreen", part = "header") |>
+  flextable::bg(i = n_rows, bg = sig_color, part = "body") |>
+  flextable::align(j = "value", align = "center", part = "body") |>
+  flextable::bold(i = n_rows, part = "body") |>
+  flextable::autofit()
+
+
+
+# # Print statistics
+# print(stats_df)
 ```
 
 The key differences in an Analysis of Means approach are:
